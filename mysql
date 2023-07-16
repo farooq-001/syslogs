@@ -1,0 +1,54 @@
+mutate {
+	  add_field => { "event.ingested" => "{{_ingest.timestamp}}" }
+}
+mutate {
+	  add_field => { "ecs.version" => "8.5.1" }
+}
+grok {
+	 match => {"message" => "%{MYSQLDATETIME}%{SPACE}(%{NUMBER:mysql.thread_id:long}%{SPACE})?(\[%{DATA:log.level}\]%{SPACE})?%{GREEDYMULTILINE:message}"}
+}
+grok {
+	 match => {"message" => "%{GREEDYDATA:message}"}
+}
+grok {
+	 match => {"message" => "(\[%{DATA:event.code}\])%{SPACE}(\[%{DATA:event.provider}\])%{SPACE}%{GREEDYMULTILINE}"}
+}
+grok {
+	 match => {"message" => "%{GREEDYDATA}"}
+}
+mutate {
+	  rename => { "@timestamp" => "event.created" }
+}
+if "ctx._tmp?.local_timestamp != null && ctx.event?.timezone == null" {
+	date {
+	timezone => <no value specified>
+	match => [ "_tmp.local_timestamp" , "['yyMMdd H:m:s', 'yyMMdd  H:m:s', 'yyyy-MM-dd H:m:s', 'yyyy-MM-dd  H:m:s']"]
+	target => "<no value specified>"
+}
+if "ctx._tmp?.local_timestamp != null && ctx.event?.timezone != null" {
+	date {
+	timezone => <no value specified>
+	match => [ "_tmp.local_timestamp" , "['yyMMdd H:m:s', 'yyMMdd  H:m:s', 'yyyy-MM-dd H:m:s', 'yyyy-MM-dd  H:m:s']"]
+	target => "<no value specified>"
+}
+if "ctx._tmp?.timestamp != null" {
+	date {
+	timezone => <no value specified>
+	match => [ "_tmp.timestamp" , "['ISO8601']"]
+	target => "<no value specified>"
+}
+Unknown processor type
+mutate {
+	  add_field => { "event.kind" => "event" }
+}
+mutate {
+	  add_field => { "event.category" => "database" }
+}
+mutate {
+	  add_field => { "event.type" => "info" }
+}
+if "ctx?.log?.level != null && ctx.log.level.toLowerCase() == 'error'" {
+	mutate {
+	add_field => { "event.type" => "error"}
+	}
+}
